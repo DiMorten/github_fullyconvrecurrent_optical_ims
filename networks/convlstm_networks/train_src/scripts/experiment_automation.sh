@@ -26,6 +26,7 @@ else
 	summary_save_path='../results/convlstm_results/summary/lm/'
 	dataset_path="../../../dataset/dataset/lm_data/"
 	sequence_len=13
+	#sequence_len=11
 	class_n=15 # 14+bcknd
 fi
 

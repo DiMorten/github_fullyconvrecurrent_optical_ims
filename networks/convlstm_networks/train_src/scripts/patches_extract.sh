@@ -18,6 +18,8 @@ then
 else
 	dataset_path="../lm_data/"
 	t_len=13
+	#t_len=11
+	
 	im_w=8658
 	im_h=8484
 	class_n=15 #14+bcknd

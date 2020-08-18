@@ -22,11 +22,14 @@ import pathlib
 #from skimage.util import view_as_windows
 import sys
 import pickle
-# Local
-import deb
 import argparse
 from sklearn.preprocessing import StandardScaler
 from skimage.util import view_as_windows
+from abc import ABC, abstractmethod
+import pdb
+# Local
+import deb
+from dataSource import DataSource, SARSource, OpticalSource
 
 def mask_train_test_switch_from_path(path):
 	mask=cv2.imread(path)
@@ -39,17 +42,22 @@ def mask_train_test_switch(mask):
 	return mask
 
 class DataForNet(object):
+
 	def __init__(self,debug=1,patch_overlap=0,im_size=(948,1068),band_n=7,t_len=6,path="../data/",class_n=9,pc_mode="local", \
 		patch_length=5,test_n_limit=1000,memory_mode="ram",flag_store=False,balance_samples_per_class=None,test_get_stride=None, \
 		n_apriori=16000, squeeze_classes=False, data_dir='data',im_h=948,im_w=1068,id_first=1, \
 		train_test_mask_name="TrainTestMask.tif",test_overlap_full=True,ram_store=True,patches_save=False,
-		patch_test_overlap=0,label_folder='labels'):
+		patch_test_overlap=0, dataSource=SARSource()):
+		self.dataSource = dataSource
+		deb.prints(self.dataSource,color=deb.bcolors.OKBLUE)
 		deb.prints(patches_save)
 		self.patches_save=patches_save
 		self.ram_store=ram_store
-		self.conf={"band_n": band_n, "t_len":t_len, "path": path, "class_n":class_n, 'label':{}, 'seq':{}}
+		self.conf={"t_len":t_len, "path": path, "class_n":class_n, 'label':{}, 'seq':{}}
+		# self.conf['t_len']=self.dataset.t_len # to-do!
+		self.conf['band_n']=self.dataSource.band_n
 		deb.prints(self.conf['path'])
-		self.label_folder=label_folder
+		self.label_folder=self.dataSource.label_folder
 		self.conf["squeeze_classes"]=squeeze_classes
 		self.conf["memory_mode"]=memory_mode #"ram" or "hdd"
 		self.debug=debug
@@ -57,8 +65,8 @@ class DataForNet(object):
 		self.data_dir=data_dir
 		self.conf["pc_mode"]=pc_mode
 		self.conf['seq']['id_first']=id_first
-		label_list=os.listdir(self.conf['path']+'labels/')
-		deb.prints(self.conf['path']+'labels/')
+		label_list=os.listdir(self.conf['path']+self.label_folder+"/")
+		deb.prints(self.conf['path']+self.label_folder+"/")
 		deb.prints(label_list)
 		self.conf['seq']['id_list']=np.sort(np.array([int(x.partition('.')[0]) for x in label_list])) # Getting all label ids
 		deb.prints(self.conf['seq']['id_list'])
@@ -67,13 +75,14 @@ class DataForNet(object):
 		if self.debug>=1: deb.prints(self.conf['seq']['id_max'])
 		if self.debug>=2: deb.prints(self.conf['seq']['id_list'])
 		self.conf["label"]["last_name"]=str(self.conf['seq']['id_first']+t_len)+".tif"
-		self.conf["label"]["last_dir"]=self.conf["path"]+"labels/"+self.conf["label"]["last_name"]
+		self.conf["label"]["last_dir"]=self.conf["path"]+self.label_folder+"/"+self.conf["label"]["last_name"]
 		self.conf["out_path"]=self.conf["path"]+"results/"
-		self.conf["in_npy_path"]=self.conf["path"]+"in_np2/"
-		self.conf["in_npy_path2"]=self.conf["path"]+"in_np2/"
+		self.conf["in_npy_path"]=self.conf["path"]+self.dataSource.foldernameInput
+		deb.prints(self.conf["in_npy_path"],color=deb.bcolors.OKBLUE)
+		self.conf["in_npy_path2"]=self.conf["path"]+self.dataSource.foldernameInput
 
 		self.conf["in_rgb_path"]=self.conf["path"]+"in_rgb/"
-		self.conf["in_labels_path"]=self.conf["path"]+"labels/"
+		self.conf["in_labels_path"]=self.conf["path"]+self.label_folder+"/"
 		self.conf["patch"]={}
 		self.conf["patch"]={"size":patch_length, "stride":5, "out_npy_path":self.conf["path"]+"patches_npy/"}
 		self.conf["patch"]["test_overlap"]=patch_test_overlap
@@ -244,7 +253,7 @@ class DataForNet(object):
 		deb.prints((self.conf["t_len"],)+self.patch_shape)
 
 		#patch["values"]=np.zeros((self.conf["t_len"],)+patch_shape)
-		patch["full_ims"]=np.zeros((self.conf["t_len"],)+self.conf["im_3d_size"])
+		patch["full_ims"]=np.zeros((self.conf["t_len"],)+self.conf["im_3d_size"]).astype(np.float32)
 		patch["full_label_ims"]=np.zeros((self.conf["t_len"],)+self.conf["im_3d_size"][0:2])
 
 		#for t_step in range(0,self.conf["t_len"]):
@@ -254,11 +263,11 @@ class DataForNet(object):
 		#=======================LOAD, NORMALIZE AND MASK FULL IMAGES ================#
 		patch=self.im_load(patch,im_filenames,add_id)
 
-
-		patch["full_ims"][patch["full_ims"]>1]=1
+		patch["full_ims"] = self.dataSource.clip_undesired_values(patch["full_ims"])
+		
 		print(np.min(patch["full_ims"]),np.max(patch["full_ims"]),np.average(patch["full_ims"]))
 		print("Normalizing...")		
-		patch["full_ims"]=self.im_seq_normalize3(patch["full_ims"],patch["train_mask"])
+		patch["full_ims"]=self.dataSource.im_seq_normalize3(patch["full_ims"],patch["train_mask"])
 
 		deb.prints(np.min(patch["full_ims"]))
 		deb.prints(np.max(patch["full_ims"]))
@@ -328,7 +337,9 @@ class DataForNet(object):
 	def im_filenames_get(self):
 		im_names=[]
 		#for i in range(1,10):
+		deb.prints(self.conf['t_len'])
 		for i in range(self.conf['seq']['id_first'],self.conf['t_len']+self.conf['seq']['id_first']):
+			
 			im_name=glob.glob(self.conf["in_npy_path"]+'im'+str(i)+'.npy')[0]
 			print(im_name)
 			#im_name=im_name[-14:-4]
@@ -344,7 +355,9 @@ class DataForNet(object):
 		for t_step in range(0,self.conf["t_len"]):	
 			print(t_step,add_id)
 			deb.prints(self.conf["in_npy_path"]+names[t_step]+".npy")
+			#patch["full_ims"][t_step] = np.load(self.conf["in_npy_path"]+names[t_step]+".npy")[:,:,:2]
 			patch["full_ims"][t_step] = np.load(self.conf["in_npy_path"]+names[t_step]+".npy")
+
 			deb.prints(np.average(patch["full_ims"][t_step]))
 			deb.prints(np.max(patch["full_ims"][t_step]))
 			deb.prints(np.min(patch["full_ims"][t_step]))
@@ -779,40 +792,7 @@ class DataForNet(object):
 		deb.prints(im.shape)
 		print(np.min(im),np.max(im),np.average(im))
 		return im
-	def im_seq_normalize3(self,im,mask):
-		
-		t_steps,h,w,channels=im.shape
-		#im=im.copy()
-		im_flat=np.transpose(im,(1,2,3,0))
-		#im=np.reshape(im,(h,w,t_steps*channels))
-		im_flat=np.reshape(im_flat,(h*w,channels*t_steps))
-		im_check=np.reshape(im_flat,(h,w,channels,t_steps))
-		im_check=np.transpose(im_check,(3,0,1,2))
 
-		deb.prints(im_check.shape)
-		deb.prints(np.all(im_check==im))
-		deb.prints(im.shape)
-		mask_flat=np.reshape(mask,-1)
-		train_flat=im_flat[mask_flat==1,:]
-
-		deb.prints(train_flat.shape)
-		print(np.min(train_flat),np.max(train_flat),np.average(train_flat))
-
-		scaler=StandardScaler()
-		scaler.fit(train_flat)
-		train_norm_flat=scaler.transform(train_flat)
-
-		im_norm_flat=scaler.transform(im_flat)
-		im_norm=np.reshape(im_norm_flat,(h,w,channels,t_steps))
-		deb.prints(im_norm.shape)
-		im_norm=np.transpose(im_norm,(3,0,1,2))
-		deb.prints(im_norm.shape)
-		#for t_step in range(t_steps):
-		#	print("Normalized time",t_step)
-		#	print(np.min(im_norm[t_step]),np.max(im_norm[t_step]),np.average(im_norm[t_step]))
-		print("FINISHED NORMALIZING, RESULT:")
-		print(np.min(im_norm),np.max(im_norm),np.average(im_norm))
-		return im_norm
 	def im_seq_mask(self,im,mask):
 		im_train=im.copy()
 		im_test=im.copy()

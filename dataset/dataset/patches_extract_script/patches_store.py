@@ -104,7 +104,7 @@ def main(_):
                                 balance_samples_per_class=args.balance_samples_per_class, test_get_stride=args.test_get_stride, \
                                 n_apriori=args.n_apriori,patch_length=args.patch_len,squeeze_classes=args.squeeze_classes,im_h=args.im_h,im_w=args.im_w, \
                                 id_first=args.id_first, train_test_mask_name=args.train_test_mask_name, \
-                                test_overlap_full=args.test_overlap_full,ram_store=args.ram_store,patches_save=args.patches_save,label_folder=args.label_folder)
+                                test_overlap_full=args.test_overlap_full,ram_store=args.ram_store,patches_save=args.patches_save)
 
 
     # Load images and create dataset (Extract patches)

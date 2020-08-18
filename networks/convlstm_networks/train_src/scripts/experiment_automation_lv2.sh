@@ -1,8 +1,8 @@
 KERAS_BACKEND=tensorflow
-id='lmish'
+id='lmish_sar'
 
 #dataset='campo_verde'
-dataset='cv'
+dataset='lm'
 
 
 # ==== EXTRACT PATCHES
