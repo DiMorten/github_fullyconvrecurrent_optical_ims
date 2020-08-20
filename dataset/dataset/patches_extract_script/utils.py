@@ -29,7 +29,7 @@ from abc import ABC, abstractmethod
 import pdb
 # Local
 import deb
-from dataSource import DataSource, SARSource, OpticalSource
+from dataSource import DataSource, SARSource, OpticalSource, Dataset, LEM, CampoVerde
 
 def mask_train_test_switch_from_path(path):
 	mask=cv2.imread(path)
@@ -43,20 +43,25 @@ def mask_train_test_switch(mask):
 
 class DataForNet(object):
 
-	def __init__(self,debug=1,patch_overlap=0,im_size=(948,1068),band_n=7,t_len=6,path="../data/",class_n=9,pc_mode="local", \
+	def __init__(self,debug=1,patch_overlap=0,pc_mode="local", \
 		patch_length=5,test_n_limit=1000,memory_mode="ram",flag_store=False,balance_samples_per_class=None,test_get_stride=None, \
-		n_apriori=16000, squeeze_classes=False, data_dir='data',im_h=948,im_w=1068,id_first=1, \
+		n_apriori=16000, squeeze_classes=False, data_dir='data',id_first=1, \
 		train_test_mask_name="TrainTestMask.tif",test_overlap_full=True,ram_store=True,patches_save=False,
-		patch_test_overlap=0, dataSource=SARSource()):
+		patch_test_overlap=0, dataSource=SARSource(), dataset=LEM()):
+
+		self.dataset = dataset
 		self.dataSource = dataSource
 		deb.prints(self.dataSource,color=deb.bcolors.OKBLUE)
+		self.dataset.addDataSource(self.dataSource)
+
 		deb.prints(patches_save)
 		self.patches_save=patches_save
 		self.ram_store=ram_store
-		self.conf={"t_len":t_len, "path": path, "class_n":class_n, 'label':{}, 'seq':{}}
-		# self.conf['t_len']=self.dataset.t_len # to-do!
+		self.conf={"t_len":self.dataset.t_len, "path": self.dataset.path, "class_n":self.dataset.class_n, 'label':{}, 'seq':{}}
 		self.conf['band_n']=self.dataSource.band_n
 		deb.prints(self.conf['path'])
+		os.system("rm -rf ../"+self.conf['path']+"/summaries/*")
+
 		self.label_folder=self.dataSource.label_folder
 		self.conf["squeeze_classes"]=squeeze_classes
 		self.conf["memory_mode"]=memory_mode #"ram" or "hdd"
@@ -65,16 +70,11 @@ class DataForNet(object):
 		self.data_dir=data_dir
 		self.conf["pc_mode"]=pc_mode
 		self.conf['seq']['id_first']=id_first
-		label_list=os.listdir(self.conf['path']+self.label_folder+"/")
+		#label_list=os.listdir(self.conf['path']+self.label_folder+"/")
 		deb.prints(self.conf['path']+self.label_folder+"/")
-		deb.prints(label_list)
-		self.conf['seq']['id_list']=np.sort(np.array([int(x.partition('.')[0]) for x in label_list])) # Getting all label ids
-		deb.prints(self.conf['seq']['id_list'])
-		self.conf['seq']['id_max']=self.conf['seq']['id_list'][-1]
-		#deb.prints(self.conf['seq']['id_list'])
-		if self.debug>=1: deb.prints(self.conf['seq']['id_max'])
-		if self.debug>=2: deb.prints(self.conf['seq']['id_list'])
-		self.conf["label"]["last_name"]=str(self.conf['seq']['id_first']+t_len)+".tif"
+		#deb.prints(label_list)
+
+		self.conf["label"]["last_name"]=str(self.conf['seq']['id_first']+self.conf['t_len'])+".tif"
 		self.conf["label"]["last_dir"]=self.conf["path"]+self.label_folder+"/"+self.conf["label"]["last_name"]
 		self.conf["out_path"]=self.conf["path"]+"results/"
 		self.conf["in_npy_path"]=self.conf["path"]+self.dataSource.foldernameInput
@@ -102,7 +102,7 @@ class DataForNet(object):
 		self.conf["test"]["overlap_full"]=test_overlap_full
 		
 		#self.conf["im_size"]=im_size
-		self.conf["im_size"]=(im_h,im_w)
+		self.conf["im_size"]=(self.dataset.im_h,self.dataset.im_w)
 		deb.prints(self.conf["im_size"])
 		deb.prints(self.conf["band_n"])		
 		self.conf["im_3d_size"]=self.conf["im_size"]+(self.conf["band_n"],)
@@ -234,7 +234,6 @@ class DataForNet(object):
 		add_id=0
 		if self.debug>=1: 
 			deb.prints(add_id)
-			deb.prints(self.conf['seq']['id_max'])
 			deb.prints(self.conf["t_len"])
 		pathlib.Path(self.conf["patch"]["ims_path"]).mkdir(parents=True, exist_ok=True) 
 		pathlib.Path(self.conf["patch"]["labels_path"]).mkdir(parents=True, exist_ok=True) 
@@ -243,7 +242,8 @@ class DataForNet(object):
 		
 
 		#========================== GET IMAGE FILENAMES =================================#
-		im_filenames=self.im_filenames_get()
+		#im_filenames=self.im_filenames_get()
+		im_filenames=self.dataset.im_list
 
 
 
@@ -363,8 +363,8 @@ class DataForNet(object):
 			deb.prints(np.min(patch["full_ims"][t_step]))
 			
 			#deb.prints(patch["full_ims"][t_step].dtype)
-			patch["full_label_ims"][t_step] = cv2.imread(self.conf["path"]+self.label_folder+"/"+names[t_step][2:]+".tif",0)
-			print(self.conf["path"]+self.label_folder+"/"+names[t_step][2:]+".tif")
+			patch["full_label_ims"][t_step] = cv2.imread(self.conf["path"]+self.label_folder+"/"+names[t_step]+".tif",0)
+			print(self.conf["path"]+self.label_folder+"/"+names[t_step]+".tif")
 			deb.prints(np.unique(patch["full_label_ims"][t_step],return_counts=True))
 			#for band in range(0,self.conf["band_n"]):
 			#	patch["full_ims_train"][t_step,:,:,band][patch["train_mask"]!=1]=-1
