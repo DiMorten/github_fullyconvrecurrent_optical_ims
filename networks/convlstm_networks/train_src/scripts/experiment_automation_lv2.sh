@@ -1,5 +1,5 @@
 KERAS_BACKEND=tensorflow
-id='lmish_sar'
+id='cvish_sar'
 
 #dataset='campo_verde'
 dataset='lm'

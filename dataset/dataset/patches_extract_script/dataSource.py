@@ -39,7 +39,7 @@ class DataSource(object):
 
 	
 	@abstractmethod
-	def im_seq_normalize3(self,im,mask):
+	def im_load(self,filename):
 		pass
 
 class SARSource(DataSource):
@@ -88,7 +88,8 @@ class SARSource(DataSource):
 	def clip_undesired_values(self, full_ims):
 		full_ims[full_ims>1]=1
 		return full_ims
-
+	def im_load(self,filename):
+		return np.load(filename)
 class OpticalSource(DataSource):
 	
 	def __init__(self):
@@ -137,7 +138,8 @@ class OpticalSource(DataSource):
 	def clip_undesired_values(self, full_ims):
 		#full_ims[full_ims]>7000]=1
 		return full_ims
-
+	def im_load(self,filename):
+		return np.load(filename)[3,1,0] #3,1,0 means nir,g,b.
 class Dataset(object):
 	def __init__(self,path,im_h,im_w,class_n):
 		self.path=path
@@ -175,5 +177,5 @@ class LEM(Dataset):
 		if self.dataSource.name == 'SARSource':
 			self.im_list=['20170612_S1', '20170706_S1', '20170811_S1', '20170916_S1', '20171010_S1', '20171115_S1', '20171209_S1', '20180114_S1', '20180219_S1', '20180315_S1', '20180420_S1', '20180514_S1', '20180619_S1']
 		elif self.dataSource.name == 'OpticalSource':
-			self.im_list=[]
+			self.im_list=['20170729_S2_10m','20170803_S2_10m','20170907_S2_10m','20171017_S2_10m','20171022_S2_10m','20180420_S2_10m','20180430_S2_10m','20180510_S2_10m','20180614_S2_10m','20180619_S2_10m','20180624_S2_10m']
 		self.t_len=len(self.im_list)

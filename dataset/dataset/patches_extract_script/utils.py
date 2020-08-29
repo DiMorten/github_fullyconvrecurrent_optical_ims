@@ -356,8 +356,9 @@ class DataForNet(object):
 			print(t_step,add_id)
 			deb.prints(self.conf["in_npy_path"]+names[t_step]+".npy")
 			#patch["full_ims"][t_step] = np.load(self.conf["in_npy_path"]+names[t_step]+".npy")[:,:,:2]
-			patch["full_ims"][t_step] = np.load(self.conf["in_npy_path"]+names[t_step]+".npy")
-
+			patch["full_ims"][t_step] = self.dataSource.im_load(self.conf["in_npy_path"]+names[t_step]+".npy")
+			#patch["full_ims"][t_step] = np.load(self.conf["in_npy_path"]+names[t_step]+".npy")
+			deb.prints
 			deb.prints(np.average(patch["full_ims"][t_step]))
 			deb.prints(np.max(patch["full_ims"][t_step]))
 			deb.prints(np.min(patch["full_ims"][t_step]))
@@ -365,6 +366,7 @@ class DataForNet(object):
 			#deb.prints(patch["full_ims"][t_step].dtype)
 			patch["full_label_ims"][t_step] = cv2.imread(self.conf["path"]+self.label_folder+"/"+names[t_step]+".tif",0)
 			print(self.conf["path"]+self.label_folder+"/"+names[t_step]+".tif")
+			deb.prints(self.conf["path"]+self.label_folder+"/"+names[t_step]+".tif")
 			deb.prints(np.unique(patch["full_label_ims"][t_step],return_counts=True))
 			#for band in range(0,self.conf["band_n"]):
 			#	patch["full_ims_train"][t_step,:,:,band][patch["train_mask"]!=1]=-1

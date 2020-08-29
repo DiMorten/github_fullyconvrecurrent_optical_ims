@@ -74,6 +74,9 @@ parser.add_argument('-path', '--path', dest='path',
 					default='../data/', help='Experiment id')
 parser.add_argument('-mdl', '--model_type', dest='model_type',
 					default='DenseNet', help='Experiment id')
+parser.add_argument('-ste', '--stop_epoch', dest='stop_epoch',
+					type=int, default=-1, help='Stop epoch. If 0, no fixed stop epoch.')
+
 
 
 args = parser.parse_args()
@@ -748,7 +751,7 @@ class Dataset(NetObject):
 class NetModel(NetObject):
 	def __init__(self, batch_size_train=32, batch_size_test=200, epochs=30000, 
 		patience=10, eval_mode='metrics', val_set=True,
-		model_type='DenseNet', time_measure=False, *args, **kwargs):
+		model_type='DenseNet', time_measure=False, stop_epoch=0, *args, **kwargs):
 
 		super().__init__(*args, **kwargs)
 		if self.debug >= 1:
@@ -776,6 +779,8 @@ class NetModel(NetObject):
 		self.model_save=True
 		self.time_measure=time_measure
 		self.mp=load_obj('model_params')
+		self.stop_epoch=stop_epoch
+		deb.prints(self.stop_epoch)
 	def transition_down(self, pipe, filters):
 		pipe = Conv2D(filters, (3, 3), strides=(2, 2), padding='same')(pipe)
 		pipe = keras.layers.BatchNormalization(axis=3)(pipe)
@@ -2215,9 +2220,15 @@ class NetModel(NetObject):
 			
 			#==========================TEST LOOP================================================#
 			if self.early_stop['signal']==True:
+				print(" ============= EARLY STOP ACHIEVED ===============")
+				print("============= LOADING EARLY STOP BEST WEIGHTS ===============")
 				self.graph.load_weights('weights_best.h5')
-			test_loop_each_epoch=False
-			if test_loop_each_epoch==True or self.early_stop['signal']==True:
+			test_loop_each_epoch=True
+			print('Stop epoch is {}. Current epoch is {}/{}'.format(self.stop_epoch,epoch,self.stop_epoch))
+			deb.prints(self.stop_epoch==epoch)
+			
+			if test_loop_each_epoch==True or self.early_stop['signal']==True or (self.stop_epoch>=0 and self.stop_epoch==epoch):
+				print("======== BEGINNING TEST PREDICT... ============")
 				data.patches['test']['prediction']=np.zeros_like(data.patches['test']['label'][:,:,:,:,:-1])
 				self.batch_test_stats=False
 
@@ -2236,7 +2247,6 @@ class NetModel(NetObject):
 					data.patches['test']['prediction'][idx0:idx1]=self.graph.predict(
 						batch['test']['in'].astype(np.float32),batch_size=self.batch['test']['size'])*13
 
-
 			#====================METRICS GET================================================#
 			deb.prints(data.patches['test']['label'].shape)		
 			deb.prints(idx1)
@@ -2247,6 +2257,8 @@ class NetModel(NetObject):
 				self.metrics['test']['loss'] /= self.batch['test']['n']
 			# Get test metrics
 			metrics=data.metrics_get(data.patches['test'],debug=1)
+			if test_loop_each_epoch==True:
+				print("Test metrics are printed each epoch. Metrics:",epoch,metrics)
 			
 			if self.early_stop['best_updated']==True:
 				if test_loop_each_epoch==True:
@@ -2254,18 +2266,10 @@ class NetModel(NetObject):
 				self.graph.save_weights('weights_best.h5')
 				if self.model_save==True:
 					self.graph.save('model_best.h5')
-				
+
 			print(self.early_stop['signal'])
-			if self.early_stop["signal"]==True:
-				self.early_stop['best_predictions']=data.patches['test']['prediction']
-				print("EARLY STOP EPOCH",epoch,metrics)
-				training_time=round(time.time()-init_time,2)
-				print("Training time",training_time)
-				metadata = "Timestamp:"+ str(round(time.time(),2))+". Model: "+self.model_type+". Training time: "+str(training_time)+"\n"
-				print(metadata)
-				txt_append("metadata.txt",metadata)
-				np.save("prediction.npy",self.early_stop['best_predictions'])
-				np.save("labels.npy",data.patches['test']['label'])
+			if self.early_stop["signal"]==True or (self.stop_epoch>=0 and self.stop_epoch==epoch):
+				self.final_accuracy_report(data,epoch,metrics,init_time)
 				break
 				
 			# Check early stop and store results if they are the best
@@ -2314,7 +2318,16 @@ class NetModel(NetObject):
 			else:
 				print("Train loss",self.metrics['train']['loss'])
 			#====================END METRICS GET===========================================#
-
+	def final_accuracy_report(self,data,epoch,metrics,init_time): 
+		self.early_stop['best_predictions']=data.patches['test']['prediction']
+		print("EARLY STOP EPOCH",epoch,metrics)
+		training_time=round(time.time()-init_time,2)
+		print("Training time",training_time)
+		metadata = "Timestamp:"+ str(round(time.time(),2))+". Model: "+self.model_type+". Training time: "+str(training_time)+"\n"
+		print(metadata)
+		txt_append("metadata.txt",metadata)
+		np.save("prediction.npy",self.early_stop['best_predictions'])
+		np.save("labels.npy",data.patches['test']['label'])
 
 flag = {"data_create": 2, "label_one_hot": True}
 if __name__ == '__main__':
@@ -2371,7 +2384,7 @@ if __name__ == '__main__':
 					 patch_step_train=args.patch_step_train, eval_mode=args.eval_mode,
 					 batch_size_train=args.batch_size_train,batch_size_test=args.batch_size_test,
 					 patience=args.patience,t_len=args.t_len,class_n=args.class_n,path=args.path,
-					 val_set=val_set,model_type=args.model_type, time_measure=time_measure)
+					 val_set=val_set,model_type=args.model_type, time_measure=time_measure, stop_epoch=args.stop_epoch)
 	model.class_n=data.class_n-1 # Model is designed without background class
 	deb.prints(data.class_n)
 	model.build()
