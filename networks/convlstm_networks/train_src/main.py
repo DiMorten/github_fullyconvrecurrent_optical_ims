@@ -112,7 +112,7 @@ class NetObject(object):
 
 		self.patches['train']['step']=patch_step_train
 		self.patches['test']['step']=patch_step_test 
-		self.path_patches_bckndfixed = path + 'patches_bckndfixed'       
+      
 		self.path['train']['in'] = path + 'train_test/train/ims/'
 		self.path['test']['in'] = path + 'train_test/test/ims/'
 		self.path['train']['label'] = path + 'train_test/train/labels/'
@@ -121,13 +121,10 @@ class NetObject(object):
 		# in these paths, the augmented train set and validation set are stored
 		# they can be loaded after (flag decides whether estimating these values and storing,
 		# or loading the precomputed ones)
-		self.path['train_augmented']={}
-		self.path['train_augmented']['in'] = path + 'train_test/train_augmented/ims/'
-		self.path['train_augmented']['label'] = path + 'train_test/train_augmented/labels/'
-		
-		self.path['val']={}
-		self.path['val']['in'] = path + 'train_test/val/ims/'
-		self.path['val']['label'] = path + 'train_test/val/labels/'
+		self.path_patches_bckndfixed = path + 'patches_bckndfixed/' 
+		self.path['train_bckndfixed']=self.path_patches_bckndfixed+'train/'
+		self.path['val_bckndfixed']=self.path_patches_bckndfixed+'val/'
+		self.path['test_bckndfixed']=self.path_patches_bckndfixed+'test/'
 		
 		self.channel_n = channel_n
 		self.debug = debug
@@ -316,17 +313,17 @@ class Dataset(NetObject):
 
 #=============== PATCHES STORE ==========================#
 
-	def patchesStore(self, patches, split='train'):
-		pathlib.Path(self.path[split]['in']).mkdir(parents=True, exist_ok=True) 
-		np.save(self.path[split]['in']+'patches_in.npy', patches['in']) #to-do: add polymorphism for other types of input 
+	def patchesStore(self, patches, split='train_bckndfixed'):
+		pathlib.Path(self.path[split]).mkdir(parents=True, exist_ok=True) 
+		np.save(self.path[split]+'patches_in.npy', patches['in']) #to-do: add polymorphism for other types of input 
 		
-		pathlib.Path(self.path[split]['label']).mkdir(parents=True, exist_ok=True) 
-		np.save(self.path[split]['label']+'patches_labels.npy', patches['label']) #to-do: add polymorphism for other types of input 
+		#pathlib.Path(self.path[split]['label']).mkdir(parents=True, exist_ok=True) 
+		np.save(self.path[split]+'patches_label.npy', patches['label']) #to-do: add polymorphism for other types of input 
 
 	def patchesLoad(self, split='train'):
 		out={}
-		out['in']=np.load(self.path[split]['in']+'/patches_in.npy')
-		out['label']=np.load(self.path[split]['label']+'/patches_labels.npy')
+		out['in']=np.load(self.path[split]+'patches_in.npy',mmap_mode='r')
+		out['label']=np.load(self.path[split]+'patches_label.npy')
 		return out
 
 
@@ -2433,7 +2430,7 @@ if __name__ == '__main__':
 		if val_set:
 			data.val_set_get(val_set_mode,0.15)
 			deb.prints(data.patches['val']['label'].shape)
-			data.patchesStore(data.patches['val'], 'val')
+			
 		print("=== AUGMENTING TRAINING DATA")
 
 		balancing=True
@@ -2503,14 +2500,14 @@ if __name__ == '__main__':
 		deb.prints(data.patches['val']['label'].shape)
 
 		# store patches to npy (in a separate folder!)
-		data.patchesStore(data.patches['train'],'train_augmented_bckndfixed')
+		data.patchesStore(data.patches['train'],'train_bckndfixed')
 		data.patchesStore(data.patches['test'],'test_bckndfixed')
 		data.patchesStore(data.patches['val'],'val_bckndfixed')
 			
 	else:
 		print("===== LOADING PRE-COMPUTED AUGMENTED AND VAL PATCHES... ======")
 		data.patches['val']=data.patchesLoad('val_bckndfixed')
-		data.patches['train']=data.patchesLoad('train_augmented_bckndfixed')
+		data.patches['train']=data.patchesLoad('train_bckndfixed')
 		data.patches['test']=data.patchesLoad('test_bckndfixed')
 		
 
