@@ -36,6 +36,9 @@ import time
 import pickle
 from keras_self_attention import SeqSelfAttention
 import pdb
+import pathlib
+
+from patches_handler import PatchesArray
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-tl', '--t_len', dest='t_len',
 					type=int, default=7, help='t len')
@@ -108,11 +111,24 @@ class NetObject(object):
 		self.patches = {'train': {}, 'test': {}}
 
 		self.patches['train']['step']=patch_step_train
-		self.patches['test']['step']=patch_step_test        
+		self.patches['test']['step']=patch_step_test 
+		self.path_patches_bckndfixed = path + 'patches_bckndfixed'       
 		self.path['train']['in'] = path + 'train_test/train/ims/'
 		self.path['test']['in'] = path + 'train_test/test/ims/'
 		self.path['train']['label'] = path + 'train_test/train/labels/'
 		self.path['test']['label'] = path + 'train_test/test/labels/'
+
+		# in these paths, the augmented train set and validation set are stored
+		# they can be loaded after (flag decides whether estimating these values and storing,
+		# or loading the precomputed ones)
+		self.path['train_augmented']={}
+		self.path['train_augmented']['in'] = path + 'train_test/train_augmented/ims/'
+		self.path['train_augmented']['label'] = path + 'train_test/train_augmented/labels/'
+		
+		self.path['val']={}
+		self.path['val']['in'] = path + 'train_test/val/ims/'
+		self.path['val']['label'] = path + 'train_test/val/labels/'
+		
 		self.channel_n = channel_n
 		self.debug = debug
 		self.class_n = class_n
@@ -215,7 +231,7 @@ class Dataset(NetObject):
 			im_one_hot[:,:,:,:,clss][im[:,:,:,:]==clss]=1
 		return im_one_hot
 
-	def folder_load(self,folder_path):
+	def folder_load(self,folder_path): #move to patches_handler
 		paths=glob.glob(folder_path+'*.npy')
 		files=[]
 		deb.prints(len(paths))
@@ -297,6 +313,22 @@ class Dataset(NetObject):
 		deb.prints(out.shape)
 		out = np.reshape(out, (out.shape[0] * out.shape[1],) + out.shape[2::])
 		return out,partitioned_shape
+
+#=============== PATCHES STORE ==========================#
+
+	def patchesStore(self, patches, split='train'):
+		pathlib.Path(self.path[split]['in']).mkdir(parents=True, exist_ok=True) 
+		np.save(self.path[split]['in']+'patches_in.npy', patches['in']) #to-do: add polymorphism for other types of input 
+		
+		pathlib.Path(self.path[split]['label']).mkdir(parents=True, exist_ok=True) 
+		np.save(self.path[split]['label']+'patches_labels.npy', patches['label']) #to-do: add polymorphism for other types of input 
+
+	def patchesLoad(self, split='train'):
+		out={}
+		out['in']=np.load(self.path[split]['in']+'/patches_in.npy')
+		out['label']=np.load(self.path[split]['label']+'/patches_labels.npy')
+		return out
+
 
 #=============== METRICS CALCULATION ====================#
 	def ims_flatten(self,ims):
@@ -2223,7 +2255,7 @@ class NetModel(NetObject):
 				print(" ============= EARLY STOP ACHIEVED ===============")
 				print("============= LOADING EARLY STOP BEST WEIGHTS ===============")
 				self.graph.load_weights('weights_best.h5')
-			test_loop_each_epoch=True
+			test_loop_each_epoch=False
 			print('Stop epoch is {}. Current epoch is {}/{}'.format(self.stop_epoch,epoch,self.stop_epoch))
 			deb.prints(self.stop_epoch==epoch)
 			
@@ -2331,8 +2363,11 @@ class NetModel(NetObject):
 
 flag = {"data_create": 2, "label_one_hot": True}
 if __name__ == '__main__':
+
+	premade_split_patches_load=True
+	deb.prints(premade_split_patches_load)
 	#
-	
+	patchesArray = PatchesArray()
 	time_measure=False
 	#if data.dataset=='seq2':
 	#	args.class_n=10
@@ -2391,73 +2426,95 @@ if __name__ == '__main__':
 	model.class_n+=1 # This is used in loss_weights_estimate, val_set_get, semantic_balance (To-do: Eliminate bcknd class)
 	deb.prints(data.patches['train']['label'].shape)
 
-	# === SELECT VALIDATION SET FROM TRAIN SET
-	val_set = True # fix this
-	if val_set:
-		data.val_set_get(val_set_mode,0.15)
-		deb.prints(data.patches['val']['label'].shape)
-	balancing=True
-	if balancing==True:
+	if premade_split_patches_load==False:
+		print("=== SELECT VALIDATION SET FROM TRAIN SET")
+		 
+		val_set = True # fix this
+		if val_set:
+			data.val_set_get(val_set_mode,0.15)
+			deb.prints(data.patches['val']['label'].shape)
+			data.patchesStore(data.patches['val'], 'val')
+		print("=== AUGMENTING TRAINING DATA")
 
-		
-		# If patch balancing
-		
-		if data.dataset=='seq1' or data.dataset=='seq2':
-			#data.semantic_balance(500) #Changed from 1000
-			data.semantic_balance(500) #More for seq2seq
+		balancing=True
+		if balancing==True:
+
 			
-		else:
-			data.semantic_balance(300)
+			# If patch balancing
+			
+			if data.dataset=='seq1' or data.dataset=='seq2':
+				#data.semantic_balance(500) #Changed from 1000
+				data.semantic_balance(500) #More for seq2seq
+				
+			else:
+				data.semantic_balance(300)
+
+
 	model.loss_weights_estimate(data)
 
 	model.class_n-=1
-	# Label background from 0 to last. 
-	deb.prints(data.patches['train']['label'].shape)
-	# ===
-	def label_bcknd_from_0_to_last(label_one_hot,class_n):		
-		print("Changing bcknd from 0 to last...")
-		deb.prints(np.unique(label_one_hot.argmax(axis=4),return_counts=True))
 
-		label_h=np.reshape(label_one_hot,(-1,label_one_hot.shape[-1]))
-		print("label_h",label_h.shape)
-		label_int=label_h.argmax(axis=1)
-		label_int[label_int==0]=class_n+1# This number counts the bcknd. So if 3 classes+bcknd=4, class_n=4
-		label_int-=1
+	if premade_split_patches_load==False:
+		# Label background from 0 to last. 
+		deb.prints(data.patches['train']['label'].shape)
+		# ===
+		def label_bcknd_from_0_to_last(label_one_hot,class_n):		
+			print("Changing bcknd from 0 to last...")
+			deb.prints(np.unique(label_one_hot.argmax(axis=4),return_counts=True))
 
-		out = np.zeros((label_int.shape[0], class_n+1))
-		out[np.arange(label_int.shape[0]),label_int]=1
-		deb.prints(out.shape)
-		out=np.reshape(out,(label_one_hot.shape))
+			label_h=np.reshape(label_one_hot,(-1,label_one_hot.shape[-1]))
+			print("label_h",label_h.shape)
+			label_int=label_h.argmax(axis=1)
+			label_int[label_int==0]=class_n+1# This number counts the bcknd. So if 3 classes+bcknd=4, class_n=4
+			label_int-=1
 
-		deb.prints(np.unique(out.argmax(axis=4),return_counts=True))
+			out = np.zeros((label_int.shape[0], class_n+1))
+			out[np.arange(label_int.shape[0]),label_int]=1
+			deb.prints(out.shape)
+			out=np.reshape(out,(label_one_hot.shape))
 
-		return out.astype(np.int8)	
+			deb.prints(np.unique(out.argmax(axis=4),return_counts=True))
 
-	# def label_bcknd_from_0_to_last(label,class_n):	
-	# 	print("Changing bcknd from 0 to last...")
-	# 	deb.prints(np.unique(label.argmax(axis=4),return_counts=True))
+			return out.astype(np.int8)	
 
-	# 	out=np.zeros_like(label)
-	# 	valid_class_ids=[i for i in range(1,class_n+1)]
-	# 	out=label[:,:,:,:,valid_class_ids+[0]]
-	# 	deb.prints(np.unique(out.argmax(axis=4),return_counts=True))
+		# def label_bcknd_from_0_to_last(label,class_n):	
+		# 	print("Changing bcknd from 0 to last...")
+		# 	deb.prints(np.unique(label.argmax(axis=4),return_counts=True))
 
-	# 	return out
+		# 	out=np.zeros_like(label)
+		# 	valid_class_ids=[i for i in range(1,class_n+1)]
+		# 	out=label[:,:,:,:,valid_class_ids+[0]]
+		# 	deb.prints(np.unique(out.argmax(axis=4),return_counts=True))
+
+		# 	return out
 
 
-	deb.prints(data.patches['train']['label'][560,:,15,15,:])
-	data.patches['train']['label']=label_bcknd_from_0_to_last(
-		data.patches['train']['label'],model.class_n)
-	deb.prints(data.patches['train']['label'][560,:,15,15,:])
+		deb.prints(data.patches['train']['label'][560,:,15,15,:])
+		data.patches['train']['label']=label_bcknd_from_0_to_last(
+			data.patches['train']['label'],model.class_n)
+		deb.prints(data.patches['train']['label'][560,:,15,15,:])
 
-	data.patches['test']['label']=label_bcknd_from_0_to_last(
-		data.patches['test']['label'],model.class_n)
-	data.patches['val']['label']=label_bcknd_from_0_to_last(
-		data.patches['val']['label'],model.class_n)
-	data.patches['test']['in']=data.patches['test']['in'].astype(np.float32)
-	data.patches['train']['in']=data.patches['train']['in'].astype(np.float32)		
-	deb.prints(data.patches['val']['label'].shape)
-	#=========== Hannover
+		data.patches['test']['label']=label_bcknd_from_0_to_last(
+			data.patches['test']['label'],model.class_n)
+		data.patches['val']['label']=label_bcknd_from_0_to_last(
+			data.patches['val']['label'],model.class_n)
+		data.patches['test']['in']=data.patches['test']['in'].astype(np.float32)
+		data.patches['train']['in']=data.patches['train']['in'].astype(np.float32)		
+		deb.prints(data.patches['val']['label'].shape)
+
+		# store patches to npy (in a separate folder!)
+		data.patchesStore(data.patches['train'],'train_augmented_bckndfixed')
+		data.patchesStore(data.patches['test'],'test_bckndfixed')
+		data.patchesStore(data.patches['val'],'val_bckndfixed')
+			
+	else:
+		print("===== LOADING PRE-COMPUTED AUGMENTED AND VAL PATCHES... ======")
+		data.patches['val']=data.patchesLoad('val_bckndfixed')
+		data.patches['train']=data.patchesLoad('train_augmented_bckndfixed')
+		data.patches['test']=data.patchesLoad('test_bckndfixed')
+		
+
+	#=========== End of moving bcknd label from 0 to last value
 
 	metrics=['accuracy']
 	#metrics=['accuracy',fmeasure,categorical_accuracy]

@@ -30,7 +30,7 @@ else
 	class_n=15 # 14+bcknd
 fi
 
-stop_epoch=-1 # promote to lv2?
+stop_epoch=1 # promote to lv2?
 
 # #id="blockgoer"
 # rm -f log1.txt

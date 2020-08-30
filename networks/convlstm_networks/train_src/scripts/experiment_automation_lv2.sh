@@ -2,11 +2,11 @@ KERAS_BACKEND=tensorflow
 id='cvish_sar'
 
 #dataset='campo_verde'
-dataset='lm'
+dataset='cv'
 
 
 # ==== EXTRACT PATCHES
-. patches_extract.sh $dataset
+#. patches_extract.sh $dataset
 # ===== USE MODEL
 
 
