@@ -37,13 +37,12 @@ import pickle
 from keras_self_attention import SeqSelfAttention
 import pdb
 import pathlib
-
 from patches_handler import PatchesArray
 parser = argparse.ArgumentParser(description='')
 parser.add_argument('-tl', '--t_len', dest='t_len',
 					type=int, default=7, help='t len')
 parser.add_argument('-cn', '--class_n', dest='class_n',
-					type=int, default=11, help='class_n')
+					type=int, default=12, help='class_n')
 parser.add_argument('-chn', '--channel_n', dest='channel_n',
 					type=int, default=2, help='channel number')
 
@@ -62,9 +61,9 @@ parser.add_argument('-pt', '--patience', dest='patience',
 					type=int, default=10, help='patience')
 
 parser.add_argument('-bstr', '--batch_size_train', dest='batch_size_train',
-					type=int, default=32, help='patch len')
+					type=int, default=16, help='patch len')
 parser.add_argument('-bsts', '--batch_size_test', dest='batch_size_test',
-					type=int, default=32, help='patch len')
+					type=int, default=16, help='patch len')
 
 parser.add_argument('-em', '--eval_mode', dest='eval_mode',
 					default='metrics', help='Test evaluate mode: metrics or predict')
@@ -89,6 +88,16 @@ if args.patch_step_test==None:
 
 deb.prints(args.patch_step_test)
 
+
+#========= overwrite for direct execution of this py file
+args.stop_epoch=1
+args.path="../../../dataset/dataset/cv_data/"
+args.t_len=14
+args.class_n=12
+args.chanel_n=2
+args.model_type='BUnet4ConvLSTM'
+
+
 def model_summary_print(s):
 	with open('model_summary.txt','w+') as f:
 		print(s, file=f)
@@ -100,6 +109,15 @@ def txt_append(filename, append_text):
 def load_obj(name ):
 	with open('obj/' + name + '.pkl', 'rb') as f:
 		return pickle.load(f)
+
+def sizeof_fmt(num, suffix='B'):
+    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)
+
 # ================= Generic class for init values =============================================== #
 class NetObject(object):
 
@@ -204,7 +222,7 @@ class Dataset(NetObject):
 		deb.prints(self.patches['train']['label'].shape)
 		deb.prints(self.patches['test']['label'].shape)
 		unique,count = np.unique(self.patches['test']['label'],return_counts=True)
-		print_pixel_count = True
+		print_pixel_count = False
 		if print_pixel_count == True:
 			for t_step in range(self.patches['test']['label'].shape[1]):
 				deb.prints(t_step)
@@ -2510,6 +2528,9 @@ if __name__ == '__main__':
 		data.patches['train']=data.patchesLoad('train_bckndfixed')
 		data.patches['test']=data.patchesLoad('test_bckndfixed')
 		
+	#deb.prints_vars_memory()
+	print(data.patches['train']['in'].nbytes,data.patches['val']['in'].nbytes,data.patches['test']['in'].nbytes)
+	pdb.set_trace()
 
 	#=========== End of moving bcknd label from 0 to last value
 
