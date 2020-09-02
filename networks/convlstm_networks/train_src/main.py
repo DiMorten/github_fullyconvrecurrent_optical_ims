@@ -750,8 +750,6 @@ class Dataset(NetObject):
 		#print(unique,counts)
 # ========== NetModel object implements model graph definition, train/testing, early stopping ================ #
 
-#class DatasetPreProcessed(Dataset):
-#	def create_load()Ç
 class NetModel(NetObject):
 	def __init__(self, batch_size_train=32, batch_size_test=200, epochs=30000, 
 		patience=10, eval_mode='metrics', val_set=True,
