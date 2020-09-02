@@ -90,7 +90,7 @@ deb.prints(args.patch_step_test)
 
 
 #========= overwrite for direct execution of this py file
-args.stop_epoch=2
+args.stop_epoch=10
 args.path="../../../dataset/dataset/cv_data/"
 args.t_len=14
 args.class_n=12
@@ -415,85 +415,33 @@ class Dataset(NetObject):
 		deb.prints(data['label'].shape,debug,2)
 		#deb.prints(data['label_copy'].shape,debug,2)
 
-		# ==========================IMGS FLATTEN ==========================================#
-		data['prediction_h'] = self.ims_flatten(data['prediction'])
-		deb.prints(data['prediction_h'].shape,debug,2)
 
-		data['prediction_h']=self.probabilities_to_one_hot(data['prediction_h'])
-		deb.prints(data['prediction_h'].shape,debug,2)
-				
-		data['label_h'] = self.ims_flatten(data['label']) #(self.batch['test']['size']*self.patch_len*self.patch_len,self.class_n
-		deb.prints(data['label'].shape,debug,2)
-		
-		data['label_h_int']=data['label_h'].argmax(axis=1)
-		data['prediction_h_int']=data['prediction_h'].argmax(axis=1)
-
-		data['prediction_h_int']=data['prediction_h_int'][data['label_h_int']!=class_n]
-		data['label_h_int']=data['label_h_int'][data['label_h_int']!=class_n]
-
-		data['label_h'] = self.int2one_hot(data['label_h_int'],class_n)
-		data['prediction_h'] = self.int2one_hot(data['prediction_h_int'],class_n)
-		print("After passing to int then to onehot")
-		deb.prints(data['label_h'].shape,debug,2)
-		deb.prints(data['prediction_h'].shape,debug,2)
-				
-		ignore_bcknd=False
-		if ignore_bcknd==True:
-			data['prediction_h']=data['prediction_h'][:,1:]
-			data['label_h']=data['label_h'][:,1:]
-
-			if debug>0:
-				deb.prints(data['label_h'].shape)
-				deb.prints(data['prediction_h'].shape)
-			#indices_to_keep=data['prediction_h']
-			#data['prediction_h']=data['prediction_h'][:,data['prediction_h']!=0]
-			data['prediction_h']=data['prediction_h'][~np.all(data['label_h'] == 0, axis=1)]
-			data['label_h']=data['label_h'][~np.all(data['label_h'] == 0, axis=1)]
-			
-			#for row in range(0,data['label_h'].shape[0]):
-			#	if np.sum(data['label_h'][row,:])==0:
-			#		np.delete(data['label_h'],row,0)
-			#		np.delete(data['prediction_h'],row,0)
-
-
-		if debug>=1: 
-			deb.prints(data['prediction_h'].dtype)
-			deb.prints(data['label_h'].dtype)
-			deb.prints(data['prediction_h'].shape)
-			deb.prints(data['label_h'].shape)
-			deb.prints(data['label_h'][0])
-			deb.prints(data['prediction_h'][0])
+		data['prediction']=data['prediction'].argmax(axis=np.ndim(data['prediction'])-1) #argmax de las predicciones. Softmax no es necesario aqui.
+		data['prediction']=np.reshape(data['prediction'],-1) #convertir en un vector
+		data['label']=data['label'].argmax(axis=np.ndim(data['label'])-1) #igualmente, sacar el maximo valor de los labels (se pierde la ultima dimension; saca el valor maximo del one hot encoding es decir convierte a int)
+		data['label']=np.reshape(data['label'],-1) #flatten
+		data['prediction']=data['prediction'][data['label']<class_n] #logic
+		data['label']=data['label'][data['label']<class_n] #logic
 
 		#============= TEST UNIQUE PRINTING==================#
-		unique,count=np.unique(data['label_h'].argmax(axis=1),return_counts=True)
+		unique,count=np.unique(data['label'],return_counts=True)
 		print("Metric real unique+1,count",unique+1,count)
-		unique,count=np.unique(data['prediction_h'].argmax(axis=1),return_counts=True)
+		unique,count=np.unique(data['prediction'],return_counts=True)
 		print("Metric prediction unique+1,count",unique+1,count)
 		
 		#========================METRICS GET================================================#
+
 		metrics={}
-		metrics['f1_score']=f1_score(data['label_h'],data['prediction_h'],average='macro')
-		metrics['f1_score_weighted']=f1_score(data['label_h'],data['prediction_h'],average='weighted')
-		
-		metrics['overall_acc']=accuracy_score(data['label_h'],data['prediction_h'])
-		metrics['confusion_matrix']=confusion_matrix(data['label_h'].argmax(axis=1),data['prediction_h'].argmax(axis=1))
-		metrics['per_class_acc']=(metrics['confusion_matrix'].astype('float') / metrics['confusion_matrix'].sum(axis=1)[:, np.newaxis]).diagonal()
-		
+		metrics['f1_score']=f1_score(data['label'],data['prediction'],average='macro')
+		metrics['overall_acc']=accuracy_score(data['label'],data['prediction'])
+		confusion_matrix_=confusion_matrix(data['label'],data['prediction'])
+		#print(confusion_matrix_)
+		metrics['per_class_acc']=(confusion_matrix_.astype('float') / confusion_matrix_.sum(axis=1)[:, np.newaxis]).diagonal()
+		acc=confusion_matrix_.diagonal()/np.sum(confusion_matrix_,axis=1)
+		acc=acc[~np.isnan(acc)]
 		metrics['average_acc']=np.average(metrics['per_class_acc'][~np.isnan(metrics['per_class_acc'])])
 
-		
-		#=====================IMG RECONSTRUCT============================================#
-		if False==True:
-			data_label_reconstructed=self.flattened_to_im(data['label_h'],data['label'].shape)
-			data_prediction_reconstructed=self.flattened_to_im(data['prediction_h'],data['label'].shape)
-		
-			deb.prints(data_label_reconstructed.shape)
-			np.testing.assert_almost_equal(data['label'],data_label_reconstructed)
-			print("Is label reconstructed equal to original",np.array_equal(data['label'],data_label_reconstructed))
-			print("Is prediction reconstructed equal to original",np.array_equal(data['prediction'].argmax(axis=3),data_prediction_reconstructed.argmax(axis=3)))
-
-		if self.debug>=2: print(metrics['per_class_acc'])
-
+	
 		return metrics
 
 	def metrics_write_to_txt(self,metrics,loss,epoch=0,path=None):
@@ -802,6 +750,8 @@ class Dataset(NetObject):
 		#print(unique,counts)
 # ========== NetModel object implements model graph definition, train/testing, early stopping ================ #
 
+#class DatasetPreProcessed(Dataset):
+#	def create_load()Ç
 class NetModel(NetObject):
 	def __init__(self, batch_size_train=32, batch_size_test=200, epochs=30000, 
 		patience=10, eval_mode='metrics', val_set=True,
@@ -2389,52 +2339,45 @@ class NetModel(NetObject):
 flag = {"data_create": 2, "label_one_hot": True}
 if __name__ == '__main__':
 
-	premade_split_patches_load=False
-	randomly_subsample_sets=False
+	premade_split_patches_load=True
+
 
 	deb.prints(premade_split_patches_load)
 	#
 	patchesArray = PatchesArray()
 	time_measure=False
-	#if data.dataset=='seq2':
-	#	args.class_n=10
 
 	data = Dataset(patch_len=args.patch_len, patch_step_train=args.patch_step_train,
 		patch_step_test=args.patch_step_test,exp_id=args.exp_id,
 		path=args.path, t_len=args.t_len, class_n=args.class_n)
 
-	#data.dataset='seq2'
 
-	if flag['data_create']==1:
-		data.create()
-	elif flag['data_create']==2:
-		data.create_load()
+	args.patience=10
 
-	if data.dataset=='seq1' or data.dataset=='seq2':
-		args.patience=10
-	else:
-		args.patience=15
-	
-	
 	val_set=True
 	#val_set_mode='stratified'
 	val_set_mode='stratified'
 	#val_set_mode='random'
+	if premade_split_patches_load==False:
+		randomly_subsample_sets=True
 
-	deb.prints(data.patches['train']['label'].shape)
+		data.create_load()
+	
+		
 
-	
-	deb.prints(data.patches['train']['label'].shape)
-	deb.prints(data.patches['test']['label'].shape)
-	
-	test_label_unique,test_label_count=np.unique(data.patches['test']['label'].argmax(axis=4),return_counts=True)
-	deb.prints(test_label_unique)
-	deb.prints(test_label_count)
-	train_label_unique,train_label_count=np.unique(data.patches['train']['label'].argmax(axis=4),return_counts=True)
-	deb.prints(train_label_unique)
-	deb.prints(train_label_count)
-	data.label_unique=test_label_unique.copy()
-	
+
+
+		deb.prints(data.patches['train']['label'].shape)
+		deb.prints(data.patches['test']['label'].shape)
+		
+		test_label_unique,test_label_count=np.unique(data.patches['test']['label'].argmax(axis=4),return_counts=True)
+		deb.prints(test_label_unique)
+		deb.prints(test_label_count)
+		train_label_unique,train_label_count=np.unique(data.patches['train']['label'].argmax(axis=4),return_counts=True)
+		deb.prints(train_label_unique)
+		deb.prints(train_label_count)
+		data.label_unique=test_label_unique.copy()
+		
 
 
 
@@ -2450,10 +2393,10 @@ if __name__ == '__main__':
 	model.class_n=data.class_n-1 # Model is designed without background class
 	deb.prints(data.class_n)
 	model.build()
-	model.class_n+=1 # This is used in loss_weights_estimate, val_set_get, semantic_balance (To-do: Eliminate bcknd class)
-	deb.prints(data.patches['train']['label'].shape)
 
 	if premade_split_patches_load==False:
+		model.class_n+=1 # This is used in loss_weights_estimate, val_set_get, semantic_balance (To-do: Eliminate bcknd class)
+
 		print("=== SELECT VALIDATION SET FROM TRAIN SET")
 		 
 		val_set = True # fix this
@@ -2465,21 +2408,14 @@ if __name__ == '__main__':
 
 		balancing=True
 		if balancing==True:
-
-			
-			# If patch balancing
-			
-			if data.dataset=='seq1' or data.dataset=='seq2':
-				#data.semantic_balance(500) #Changed from 1000
-				data.semantic_balance(500) #More for seq2seq
+			data.semantic_balance(500) #More for seq2seq
 				
-			else:
-				data.semantic_balance(300)
 
 
-	model.loss_weights_estimate(data)
+		model.loss_weights_estimate(data)
+		np.save(data.path_patches_bckndfixed+'loss_weights.npy',model.loss_weights)
+		model.class_n-=1
 
-	model.class_n-=1
 
 	if premade_split_patches_load==False:
 		# Label background from 0 to last. 
@@ -2549,6 +2485,8 @@ if __name__ == '__main__':
 		data.patches['val']=data.patchesLoad('val_bckndfixed')
 		data.patches['train']=data.patchesLoad('train_bckndfixed')
 		data.patches['test']=data.patchesLoad('test_bckndfixed')
+		model.loss_weights=np.load(data.path_patches_bckndfixed+'loss_weights.npy')
+	deb.prints(data.patches['train']['label'].shape)
 
 	#deb.prints_vars_memory()
 	print(data.patches['train']['in'].nbytes,data.patches['val']['in'].nbytes,data.patches['test']['in'].nbytes)
