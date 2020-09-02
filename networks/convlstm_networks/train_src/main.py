@@ -90,7 +90,7 @@ deb.prints(args.patch_step_test)
 
 
 #========= overwrite for direct execution of this py file
-args.stop_epoch=1
+args.stop_epoch=2
 args.path="../../../dataset/dataset/cv_data/"
 args.t_len=14
 args.class_n=12
@@ -344,6 +344,13 @@ class Dataset(NetObject):
 		out['label']=np.load(self.path[split]+'patches_label.npy')
 		return out
 
+	def randomly_pick_samples_from_set(self,patches, out_n):
+		patches_n=patches['in'].shape[0]
+		selected_idxs=np.random.choice(patches_n, size=out_n)
+		patches['in']=patches['in'][selected_idxs]
+		patches['label']=patches['label'][selected_idxs]
+
+		return patches
 
 #=============== METRICS CALCULATION ====================#
 	def ims_flatten(self,ims):
@@ -2211,10 +2218,11 @@ class NetModel(NetObject):
 			self.metrics['train']['loss'] /= self.batch['train']['n']
 
 			self.train_predict=True
+			#pdb.set_trace()
 			#if self.train_predict:
 
 
-
+            
 			#================== VAL LOOP=====================#
 			if self.val_set:
 				data.patches['val']['prediction']=np.zeros_like(data.patches['val']['label'][:,:,:,:,:-1])
@@ -2293,9 +2301,11 @@ class NetModel(NetObject):
 
 					data.patches['test']['prediction'][idx0:idx1]=self.graph.predict(
 						batch['test']['in'].astype(np.float32),batch_size=self.batch['test']['size'])*13
-
 			#====================METRICS GET================================================#
-			deb.prints(data.patches['test']['label'].shape)		
+			deb.prints(data.patches['test']['label'].shape)	
+			deb.prints(data.patches['test']['prediction'].dtype)
+			#pdb.set_trace()
+
 			deb.prints(idx1)
 			print("Epoch={}".format(epoch))	
 			
@@ -2366,20 +2376,22 @@ class NetModel(NetObject):
 				print("Train loss",self.metrics['train']['loss'])
 			#====================END METRICS GET===========================================#
 	def final_accuracy_report(self,data,epoch,metrics,init_time): 
-		self.early_stop['best_predictions']=data.patches['test']['prediction']
+		#self.early_stop['best_predictions']=data.patches['test']['prediction']
 		print("EARLY STOP EPOCH",epoch,metrics)
 		training_time=round(time.time()-init_time,2)
 		print("Training time",training_time)
 		metadata = "Timestamp:"+ str(round(time.time(),2))+". Model: "+self.model_type+". Training time: "+str(training_time)+"\n"
 		print(metadata)
 		txt_append("metadata.txt",metadata)
-		np.save("prediction.npy",self.early_stop['best_predictions'])
+		np.save("prediction.npy",data.patches['test']['prediction'])
 		np.save("labels.npy",data.patches['test']['label'])
 
 flag = {"data_create": 2, "label_one_hot": True}
 if __name__ == '__main__':
 
-	premade_split_patches_load=True
+	premade_split_patches_load=False
+	randomly_subsample_sets=False
+
 	deb.prints(premade_split_patches_load)
 	#
 	patchesArray = PatchesArray()
@@ -2517,20 +2529,30 @@ if __name__ == '__main__':
 		data.patches['train']['in']=data.patches['train']['in'].astype(np.float32)		
 		deb.prints(data.patches['val']['label'].shape)
 
+		#========== this is only for google colab. Ram usage should be lower
+		if randomly_subsample_sets==True:
+			print("# =========== subsampling patches...")
+			data.patches['train']=data.randomly_pick_samples_from_set(data.patches['train'], 2000)
+			data.patches['test']=data.randomly_pick_samples_from_set(data.patches['test'], 2000)
+			deb.prints(data.patches['train']['in'].shape)
+			deb.prints(data.patches['test']['in'].shape)
+		
 		# store patches to npy (in a separate folder!)
 		data.patchesStore(data.patches['train'],'train_bckndfixed')
 		data.patchesStore(data.patches['test'],'test_bckndfixed')
 		data.patchesStore(data.patches['val'],'val_bckndfixed')
-			
+		print("================== PATCHES WERE STORED =====================")
+
+
 	else:
 		print("===== LOADING PRE-COMPUTED AUGMENTED AND VAL PATCHES... ======")
 		data.patches['val']=data.patchesLoad('val_bckndfixed')
 		data.patches['train']=data.patchesLoad('train_bckndfixed')
 		data.patches['test']=data.patchesLoad('test_bckndfixed')
-		
+
 	#deb.prints_vars_memory()
 	print(data.patches['train']['in'].nbytes,data.patches['val']['in'].nbytes,data.patches['test']['in'].nbytes)
-	pdb.set_trace()
+	##pdb.set_trace()
 
 	#=========== End of moving bcknd label from 0 to last value
 
@@ -2546,4 +2568,6 @@ if __name__ == '__main__':
 	if args.debug:
 		deb.prints(np.unique(data.patches['train']['label']))
 		deb.prints(data.patches['train']['label'].shape)
+        
+	#pdb.set_trace()
 	model.train(data)

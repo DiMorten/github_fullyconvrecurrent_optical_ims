@@ -135,19 +135,12 @@ def metrics_get(label_test,predictions,only_basics=False,debug=1, detailed_t=Non
 	return metrics
 
 
-# ======== ConvRNN
-
-path='/home/lvc/Jorg/igarss/convrnn_remote_sensing/results/cv/densenet/'
-prediction_path=path+'prediction.npy'
-
-#prediction_path='/home/lvc/Jorg/igarss/convrnn_remote_sensing/results/cv/prediction_ConvLSTM_DenseNet_eyesight.npy'
-
 # =========seq2seq 
 def experiment_analyze(small_classes_ignore,dataset='cv',
 		prediction_filename='prediction_DenseNetTimeDistributed_blockgoer.npy',
 		mode='each_date',debug=1):
-	path='/home/lvc/Jorg/igarss/convrnn_remote_sensing/results/seq2seq_ignorelabel/'+dataset+'/'
-
+	#path='/home/lvc/Jorg/igarss/convrnn_remote_sensing/results/seq2seq_ignorelabel/'+dataset+'/'
+	path="../../results/convlstm_results/"+dataset+'/'
 	prediction_path=path+prediction_filename
 	predictions=np.load(prediction_path, allow_pickle=True)
 	label_test=np.load(path+'labels.npy', allow_pickle=True)
@@ -497,60 +490,12 @@ if dataset=='cv':
 		['prediction_ConvLSTM_seq2seq_redoingz2.npy',
 		'prediction_ConvLSTM_seq2seq_bi_redoing3.npy',
 		'prediction_DenseNetTimeDistributed_128x2_redoing3.npy']]
-	experiment_groups=[[
-		'prediction_pyramid_dilated_bconvlstm_lauras.npy',
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras.npy',
-##		'prediction_ConvLSTM_seq2seq_bi_redoing.npy',
-		'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy'],
-
-		['prediction_pyramid_dilated_bconvlstm_lauras.npy',
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras.npy',
-		'prediction_DenseNetTimeDistributed_128x2_redoing.npy'],
-
-		['prediction_pyramid_dilated_bconvlstm_lauras.npy',
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras.npy',
-		'prediction_DenseNetTimeDistributed_128x2_redoingz.npy'],
-		['prediction_pyramid_dilated_bconvlstm_lauras.npy',
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras.npy',
-		'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy']]
-
-	experiment_groups=[[
-		'prediction_deeplab_rs_nowifi.npy',
-		'prediction_deeplabv3_deeplab_param2_2M.npy',
-		'prediction_pyramid_dilated_bconvlstm_lauras2.npy',
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras2.npy',
-##		'prediction_ConvLSTM_seq2seq_bi_redoing.npy',
-		'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy'],
-
-		['prediction_deeplab_rs_nowifi.npy',
-		'prediction_deeplabv3_deeplab_param2_2M.npy',
-		'prediction_pyramid_dilated_bconvlstm_lauras2.npy',
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras2.npy',
-		'prediction_DenseNetTimeDistributed_128x2_redoing.npy'],
-
-		['prediction_deeplab_rs_nowifi.npy',
-		'prediction_deeplabv3_deeplab_param2_2M.npy',
-		'prediction_pyramid_dilated_bconvlstm_lauras2.npy',
-
-		'prediction_deeplab_rs_nowifi.npy',
-		'prediction_DenseNetTimeDistributed_128x2_redoingz.npy'],
-		['prediction_deeplab_rs_nowifi.npy',
-		'prediction_deeplabv3_deeplab_param2_2M.npy',
-		'prediction_pyramid_dilated_bconvlstm_lauras2.npy',
-
-		'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras2.npy',
-		'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy']]
-	exp_id=10 # 4 for thesis and journal
+	exp_id=1 # 4 for thesis and journal
 
 	if exp_id==1:
 		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_deeplab_rs_multiscale_v3plus.npy',
-			'prediction_deeplab_rs_nowifi.npy',
-			'prediction_deeplabv3_lauras3.npy',
-			'prediction_pyramid_dilated_bconvlstm_lauras2.npy',
-			'prediction_FCN_ConvLSTM_seq2seq_bi_skip_lauras2.npy',
-	##		'prediction_ConvLSTM_seq2seq_bi_redoing.npy',
-			'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy']]
+			'prediction_1.npy',
+			'prediction_1.npy']]
 	# 		[#'prediction_deeplabv3plus_v3plus2.npy',
 	# 		'prediction_deeplab_rs_multiscale_v3plus.npy',
 	# 		'prediction_deeplab_rs_nowifi.npy',
@@ -560,176 +505,6 @@ if dataset=='cv':
 	# ##		'prediction_ConvLSTM_seq2seq_bi_redoing.npy',
 	# 		'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy']]
 
-	elif exp_id==2:
-		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			'prediction_BUnetConvLSTM_2convins4.npy',
-			'prediction_BAtrousConvLSTM_2convins.npy',
-			'prediction_BUnetAtrousConvLSTM_2convins4.npy',
-			'prediction_BUnetAtrousConvLSTM_v3p_2convins2.npy']]
-
-		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy',
-			'prediction_BUnetConvLSTM_2convins4.npy',
-			'prediction_BUnet2ConvLSTM_raulapproved.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-			'prediction_BAtrousConvLSTM_2convins5.npy',
-			'prediction_BUnetAtrousConvLSTM_2convins4.npy',
-			'prediction_BUnetAtrousConvLSTM_v3p_2convins2.npy'
-			]]
-	elif exp_id==3:
-		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			#'prediction_BUnetConvLSTM_2convins4.npy',
-			'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy',
-			'prediction_DenseNetTimeDistributed_128x2_3blocks_repeating3.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BAtrousConvLSTM_2convins5.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating3.npy']]
-
-	elif exp_id==4:
-		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy',
-			#'prediction_BUnetConvLSTM_2convins4.npy',
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			#'prediction_BAtrousConvLSTM_2convins5.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-			]]
-
-		experiment_groups=[[
-			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy',
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-			],
-
-			['prediction_ConvLSTM_seq2seq_redoing.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoing.npy',
-			'prediction_DenseNetTimeDistributed_128x2_redoing.npy',
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-
-			],
-			['prediction_ConvLSTM_seq2seq_redoingz.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoingz.npy',
-			'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating3.npy',
-
-			],
-			['prediction_ConvLSTM_seq2seq_redoingz2.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoingz2.npy',
-			'prediction_DenseNetTimeDistributed_128x2_redoing3.npy',
-			'prediction_BUnet4ConvLSTM_repeating4.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating4.npy',
-			],
-			['prediction_ConvLSTM_seq2seq_redoingz.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoing3.npy',
-			'prediction_DenseNetTimeDistributed_128x2_redoing3.npy',
-			'prediction_BUnet4ConvLSTM_repeating7.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating7.npy',
-			]]
-
-
-
-
-	elif exp_id==5:
-		experiment_groups=[[
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BUnet4ConvLSTM_repeating4.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating3.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating4.npy',
-			'prediction_BAtrousGAPConvLSTM_repeating6.npy',
-			]]
-		experiment_groups=[[
-			'prediction_DenseNetTimeDistributed_128x2_redoing3.npy',
-			'prediction_DenseNetTimeDistributed_128x2_3blocks_3blocks_check.npy'
-			]]
-		experiment_groups=[[
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BUnet4ConvLSTM_repeating4.npy',
-			#'prediction_BUnet5ConvLSTM_unet_one_conv_in.npy',
-			'prediction_BUnet4ConvLSTM_attention_2020.npy',
-			
-			]]
-
-		#experiment_groups=[[
-		#	'prediction_ConvLSTM_seq2seq_bi_redoing3.npy',
-		#	'prediction_ConvLSTM_seq2seq_bi_redoing3.npy'
-		#	]]
-	elif exp_id==6:
-		experiment_groups=[[
-			'prediction_ConvLSTM_seq2seq_bi_redoing3.npy',
-			#'prediction_fcn_bconvlstm.npy',
-			'prediction_bconvlstm_wholeinput.npy',
-			'prediction_unet_convlstm_temouri2.npy',
-			'prediction_BUnet4ConvLSTM_repeating1.npy'
-			]]
-	elif exp_id==7:
-		experiment_groups=[[
-			'prediction_ConvLSTM_seq2seq_2020_1.npy',
-			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_2020_2.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_attention_attention2020.npy'
-			
-		]]
-		experiment_groups=[[
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BUnet4ConvLSTM_repeating4.npy',
-			'prediction_BUnet4ConvLSTM_SelfAttention_attention_2020.npy',
-			#'prediction_BUnet4ConvLSTM_attention_2020.npy',
-			'prediction_Unet4ConvLSTM_SelfAttention_attention_2020.npy',
-				
-		]]
-	elif exp_id==8:
-		experiment_groups=[[
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoing.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoingz.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoingz2.npy',
-			'prediction_ConvLSTM_seq2seq_bi_redoing3.npy',
-			'prediction_ConvLSTM_seq2seq_bi_SelfAttention_selfattention.npy',
-			'prediction_ConvLSTM_seq2seq_bi_SelfAttention_selfattention2.npy',
-
-				
-		]]			
-	elif exp_id==9:
-		experiment_groups=[[
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BUnet4_Standalone_noconvlstm.npy'
-				
-		]]	
-	elif exp_id==10:
-		experiment_groups=[[
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-			'prediction_BUnet4ConvLSTM_repeating4.npy',
-			'prediction_BUnet4ConvLSTM_repeating7.npy'				
-		]]	
-	elif exp_id==11:
-		experiment_groups=[[
-			'prediction_BUnet4ConvLSTM_repeating1.npy',
-			'prediction_BUnet4ConvLSTM_repeating2.npy',
-		]]	
-
-##		'prediction_DenseNetTimeDistributed_128x2_redoing.npy']
-		##'prediction_ConvLSTM_seq2seq_loneish.npy',
-		##'prediction_ConvLSTM_seq2seq_bi_loneish.npy',
-		#'prediction_ConvLSTM_seq2seq_bi_60x2_loneish.npy',
-		#'prediction_FCN_ConvLSTM_seq2seq_bi_skip_loneish.npy',
-		#'prediction_DenseNetTimeDistributed_blockgoer.npy',
-		#'prediction_DenseNetTimeDistributed_128x2_filtersizefix2.npy']
 elif dataset=='lm':
 
 	experiment_groups=[[

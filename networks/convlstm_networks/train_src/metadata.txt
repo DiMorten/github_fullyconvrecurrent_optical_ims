@@ -10,3 +10,5 @@ Timestamp:1598648970.97. Model: BUnet4ConvLSTM. Training time: 959.73
 Timestamp:1598748873.02. Model: BUnet4ConvLSTM. Training time: 683.72
 Timestamp:1598754393.42. Model: BUnet4ConvLSTM. Training time: 679.86
 Timestamp:1598772738.4. Model: BUnet4ConvLSTM. Training time: 677.59
+Timestamp:1598858627.48. Model: BUnet4ConvLSTM. Training time: 370.84
+Timestamp:1599007917.48. Model: BUnet4ConvLSTM. Training time: 1812.94
