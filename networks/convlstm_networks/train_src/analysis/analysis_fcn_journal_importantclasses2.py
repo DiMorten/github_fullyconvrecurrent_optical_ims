@@ -169,6 +169,9 @@ def experiment_analyze(small_classes_ignore,dataset='cv',
 		# 	for date in range(14):
 		# 		if date<=7:
 		# 			date_important_classes=[0,6,8]
+
+
+		
 		for t in range(label_test.shape[1]):
 			predictions_t = predictions[:,t,:,:,:]
 			label_test_t = label_test[:,t,:,:,:]
@@ -421,6 +424,8 @@ def experiments_plot(metrics,experiment_list,dataset,
 		legends=('BConvLSTM','BConvLSTM','BConvLSTM','BConvLSTM','BConvLSTM','BConvLSTM_SelfAttention','BConvLSTM_SelfAttention')
 	elif experiment_id==8:
 		legends=('BUnetConvlSTM','BUnetStandalone')
+	elif experiment_id==9:
+		legends=('UConvLSTM','BConvLSTM','BUNetConvLSTM','BAtrousConvLSTM')
 
 	#ncol=len(legends)
 	ncol=3
@@ -466,7 +471,7 @@ def experiments_plot(metrics,experiment_list,dataset,
 	
 	plt.show()
 
-dataset='cv'
+dataset='lm'
 load_metrics=False
 small_classes_ignore=False
 #mode='global'
@@ -494,8 +499,8 @@ if dataset=='cv':
 
 	if exp_id==1:
 		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_1.npy',
-			'prediction_1.npy']]
+			'prediction.npy',
+			'prediction.npy']]
 	# 		[#'prediction_deeplabv3plus_v3plus2.npy',
 	# 		'prediction_deeplab_rs_multiscale_v3plus.npy',
 	# 		'prediction_deeplab_rs_nowifi.npy',
@@ -520,17 +525,8 @@ elif dataset=='lm':
 		['prediction_ConvLSTM_seq2seq_redoingz2.npy',
 		'prediction_ConvLSTM_seq2seq_bi_redoingz2.npy',
 		'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy'],]
-	exp_id=4 # choose 4 for thesis and journal paper
-	if exp_id==1:
-		experiment_groups=[[#'prediction_deeplabv3plus_v3plus2.npy',
-			'prediction_deeplab_rs_multiscale_v3plus2.npy',
-			'prediction_deeplab_rs_nowifi.npy',
-			'prediction_deeplabv3_nowifi.npy',
-			'prediction_pyramid_dilated_bconvlstm_v3plus2.npy',
-			'prediction_FCN_ConvLSTM_seq2seq_bi_skip_v3plus2.npy', #nowifi
-			'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy']
-			]
-	elif exp_id==2:
+	exp_id=9 # choose 4 for thesis and journal paper
+	if exp_id==2:
 		experiment_groups=[['prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
 			'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy',
 			'prediction_BUnetConvLSTM_2convins5.npy',
@@ -586,16 +582,9 @@ elif dataset=='lm':
 
 			]
 	elif exp_id==5:
+
 		experiment_groups=[[
-			'prediction_BAtrousGAPConvLSTM_repeating3.npy',
-			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
-			]]		
-		experiment_groups=[[
-			#'prediction_BUnet4ConvLSTM_repeating1.npy',
-			#'prediction_BUnet4ConvLSTM_repeating2.npy',
-			#'prediction_BUnet4ConvLSTM_repeating4.npy',
-			#'prediction_BUnet4ConvLSTM_repeating6.npy',
-			
+
 			'prediction_BAtrousGAPConvLSTM_repeating3.npy',
 			'prediction_BAtrousGAPConvLSTM_raulapproved.npy',
 			'prediction_BAtrousGAPConvLSTM_repeating4.npy',
@@ -631,6 +620,22 @@ elif dataset=='lm':
 			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
 			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy' #double filters
 			]]			
+	elif exp_id==8: #Check against matlab f1 results
+		experiment_groups=[[
+			'prediction_convlstm.npy',
+			'prediction_ConvLSTM_seq2seq_repeating7.npy',
+			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
+			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy' #double filters
+		]]
+	elif exp_id==9: #Check against matlab f1 results
+		experiment_groups=[[
+			'prediction_convlstm.npy',
+			'prediction_bconvlstm_lem_ok.npy',
+			'prediction_bconvlstm_lem_ok2.npy',
+			'prediction_BUnet4ConvLSTM_lmish_sar_newscript2.npy', #double filters
+			'prediction_batrousconvlstm_notok.npy'
+		]]
+print("Experiment groups",experiment_groups)
 if load_metrics==False:
 	experiment_metrics=experiment_groups_analyze(dataset,experiment_groups,
 		mode=mode,exp_id=exp_id,small_classes_ignore=small_classes_ignore)

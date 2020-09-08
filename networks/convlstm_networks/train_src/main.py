@@ -90,13 +90,22 @@ deb.prints(args.patch_step_test)
 
 
 #========= overwrite for direct execution of this py file
-args.stop_epoch=10
-args.path="../../../dataset/dataset/cv_data/"
-args.t_len=14
-args.class_n=12
+dataset='lm'
+if dataset=='cv':
+	args.path="../../../dataset/dataset/cv_data/"
+	args.t_len=14
+	args.class_n=12
+elif dataset=='lm':
+	args.path="../../../dataset/dataset/lm_data/"
+	args.t_len=13
+	args.class_n=15
+args.stop_epoch=-1
 args.chanel_n=2
-args.model_type='BUnet4ConvLSTM'
-
+#args.model_type='BUnet4ConvLSTM'
+#args.model_type='ConvLSTM_seq2seq'
+#args.model_type='ConvLSTM_seq2seq_bi'
+args.model_type='DenseNetTimeDistributed_128x2'
+#args.model_type='BAtrousGAPConvLSTM'
 
 def model_summary_print(s):
 	with open('model_summary.txt','w+') as f:
@@ -232,7 +241,7 @@ class Dataset(NetObject):
 			for t_step in range(self.patches['test']['label'].shape[1]):
 				deb.prints(t_step)
 				deb.prints(np.unique(self.patches['test']['label'].argmax(axis=-1)[:,t_step],return_counts=True))
-			#pdb.set_trace()
+			pdb.set_trace()
 		
 		self.patches['train']['n']=self.patches['train']['in'].shape[0]
 		self.patches['train']['idx']=range(self.patches['train']['n'])
@@ -400,48 +409,51 @@ class Dataset(NetObject):
 		out=np.reshape(out,((out.shape[0],)+label_shape[1:]))
 		return out
 
-	def metrics_get(self,data,ignore_bcknd=True,debug=2): #requires batch['prediction'],batch['label']
-		class_n=data['prediction'].shape[-1]
+	def metrics_get(self,prediction, label,ignore_bcknd=True,debug=2): #requires batch['prediction'],batch['label']
+		print("======================= METRICS GET")
+		class_n=prediction.shape[-1]
 		#print("label unque at start of metrics_get",
-		#	np.unique(data['label'].argmax(axis=4),return_counts=True))
+		#	np.unique(label.argmax(axis=4),return_counts=True))
 		
 
-		#data['label'][data['label'][:,],:,:,:,:]
+		#label[label[:,],:,:,:,:]
 		#data['label_copy']=data['label_copy'][:,:,:,:,:-1] # Eliminate bcknd dimension after having eliminated bcknd samples
 		
 		#print("label_copy unque at start of metrics_get",
 	#		np.unique(data['label_copy'].argmax(axis=4),return_counts=True))
-		deb.prints(data['prediction'].shape,debug,2)
-		deb.prints(data['label'].shape,debug,2)
+		deb.prints(prediction.shape,debug,2)
+		deb.prints(label.shape,debug,2)
 		#deb.prints(data['label_copy'].shape,debug,2)
 
 
-		data['prediction']=data['prediction'].argmax(axis=np.ndim(data['prediction'])-1) #argmax de las predicciones. Softmax no es necesario aqui.
-		data['prediction']=np.reshape(data['prediction'],-1) #convertir en un vector
-		data['label']=data['label'].argmax(axis=np.ndim(data['label'])-1) #igualmente, sacar el maximo valor de los labels (se pierde la ultima dimension; saca el valor maximo del one hot encoding es decir convierte a int)
-		data['label']=np.reshape(data['label'],-1) #flatten
-		data['prediction']=data['prediction'][data['label']<class_n] #logic
-		data['label']=data['label'][data['label']<class_n] #logic
+		prediction=prediction.argmax(axis=np.ndim(prediction)-1) #argmax de las predicciones. Softmax no es necesario aqui.
+		deb.prints(prediction.shape)
+		prediction=np.reshape(prediction,-1) #convertir en un vector
+		deb.prints(prediction.shape)
+		label=label.argmax(axis=np.ndim(label)-1) #igualmente, sacar el maximo valor de los labels (se pierde la ultima dimension; saca el valor maximo del one hot encoding es decir convierte a int)
+		label=np.reshape(label,-1) #flatten
+		prediction=prediction[label<class_n] #logic
+		label=label[label<class_n] #logic
 
 		#============= TEST UNIQUE PRINTING==================#
-		unique,count=np.unique(data['label'],return_counts=True)
+		unique,count=np.unique(label,return_counts=True)
 		print("Metric real unique+1,count",unique+1,count)
-		unique,count=np.unique(data['prediction'],return_counts=True)
+		unique,count=np.unique(prediction,return_counts=True)
 		print("Metric prediction unique+1,count",unique+1,count)
 		
 		#========================METRICS GET================================================#
 
 		metrics={}
-		metrics['f1_score']=f1_score(data['label'],data['prediction'],average='macro')
-		metrics['overall_acc']=accuracy_score(data['label'],data['prediction'])
-		confusion_matrix_=confusion_matrix(data['label'],data['prediction'])
+		metrics['f1_score']=f1_score(label,prediction,average='macro')
+		metrics['f1_score_weighted']=f1_score(label,prediction,average='weighted')
+		metrics['overall_acc']=accuracy_score(label,prediction)
+		metrics['confusion_matrix']=confusion_matrix(label,prediction)
 		#print(confusion_matrix_)
-		metrics['per_class_acc']=(confusion_matrix_.astype('float') / confusion_matrix_.sum(axis=1)[:, np.newaxis]).diagonal()
-		acc=confusion_matrix_.diagonal()/np.sum(confusion_matrix_,axis=1)
+		metrics['per_class_acc']=(metrics['confusion_matrix'].astype('float') / metrics['confusion_matrix'].sum(axis=1)[:, np.newaxis]).diagonal()
+		acc=metrics['confusion_matrix'].diagonal()/np.sum(metrics['confusion_matrix'],axis=1)
 		acc=acc[~np.isnan(acc)]
 		metrics['average_acc']=np.average(metrics['per_class_acc'][~np.isnan(metrics['per_class_acc'])])
 
-	
 		return metrics
 
 	def metrics_write_to_txt(self,metrics,loss,epoch=0,path=None):
@@ -2053,7 +2065,7 @@ class NetModel(NetObject):
 		self.metrics['test']['loss'] /= self.batch['test']['n']
 			
 		# Get test metrics
-		metrics=data.metrics_get(data.patches['test'],debug=1)
+		metrics=data.metrics_get(data.patches['test']['prediction'],data.patches['test']['label'],debug=1)
 		print('oa={}, aa={}, f1={}, f1_wght={}'.format(metrics['overall_acc'],
 			metrics['average_acc'],metrics['f1_score'],metrics['f1_score_weighted']))
 	def train(self, data):
@@ -2173,6 +2185,7 @@ class NetModel(NetObject):
             
 			#================== VAL LOOP=====================#
 			if self.val_set:
+				deb.prints(data.patches['val']['label'].shape)
 				data.patches['val']['prediction']=np.zeros_like(data.patches['val']['label'][:,:,:,:,:-1])
 				self.batch_test_stats=False
 
@@ -2192,7 +2205,7 @@ class NetModel(NetObject):
 						batch['val']['in'].astype(np.float32),batch_size=self.batch['val']['size'])
 				self.metrics['val']['loss'] /= self.batch['val']['n']
 
-				metrics_val=data.metrics_get(data.patches['val'],debug=2)
+				metrics_val=data.metrics_get(data.patches['val']['prediction'],data.patches['val']['label'],debug=2)
 
 				self.early_stop_check(metrics_val,epoch)
 				#if epoch==1000 or epoch==700 or epoch==500 or epoch==1200:
@@ -2261,7 +2274,7 @@ class NetModel(NetObject):
 				# Average epoch loss
 				self.metrics['test']['loss'] /= self.batch['test']['n']
 			# Get test metrics
-			metrics=data.metrics_get(data.patches['test'],debug=1)
+			metrics=data.metrics_get(data.patches['test']['prediction'],data.patches['test']['label'],debug=1)
 			if test_loop_each_epoch==True:
 				print("Test metrics are printed each epoch. Metrics:",epoch,metrics)
 			
@@ -2357,7 +2370,7 @@ if __name__ == '__main__':
 	val_set_mode='stratified'
 	#val_set_mode='random'
 	if premade_split_patches_load==False:
-		randomly_subsample_sets=True
+		randomly_subsample_sets=False
 
 		data.create_load()
 	
@@ -2483,6 +2496,8 @@ if __name__ == '__main__':
 		data.patches['val']=data.patchesLoad('val_bckndfixed')
 		data.patches['train']=data.patchesLoad('train_bckndfixed')
 		data.patches['test']=data.patchesLoad('test_bckndfixed')
+
+		deb.prints(data.patches['val']['label'].shape)
 		model.loss_weights=np.load(data.path_patches_bckndfixed+'loss_weights.npy')
 	deb.prints(data.patches['train']['label'].shape)
 

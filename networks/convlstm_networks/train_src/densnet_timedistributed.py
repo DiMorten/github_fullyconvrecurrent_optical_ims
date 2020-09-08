@@ -35,12 +35,13 @@ from keras.engine import Layer
 from keras.utils.generic_utils import get_custom_objects
 #from keras.utils.conv_utils import normalize_data_format
 
+import deb
 convlstm_filters=60
 def DenseNetFCNTimeDistributed(input_shape, nb_dense_block=5, growth_rate=16, nb_layers_per_block=4,
                 reduction=0.0, dropout_rate=0.0, weight_decay=1E-4, init_conv_filters=48,
                 include_top=True, weights=None, input_tensor=None, classes=1, activation='softmax',
                 upsampling_conv=128, upsampling_type='upsampling', batchsize=None,
-                recurrent_filters=convlstm_filters, attention=False):
+                recurrent_filters=convlstm_filters):
     """Instantiate the DenseNet FCN architecture.
         Note that when using TensorFlow,
         for best performance you should set
@@ -412,21 +413,18 @@ def __create_fcn_dense_net(nb_classes, img_input, include_top, nb_dense_block=5,
     # The last dense_block does not have a transition_down_block
     # return the concatenated feature maps without the concatenation of the input
 
-    if attention==True:
-        x = Bidirectional(ConvLSTM2D(recurrent_filters, (3, 3), kernel_initializer="he_uniform", padding="same", use_bias=False,
-                              kernel_regularizer=l2(weight_decay),
-                              return_sequences=True))(x)
-
-    elif attention==False:
-
-        x = Bidirectional(ConvLSTM2D(recurrent_filters, (3, 3), kernel_initializer="he_uniform", padding="same", use_bias=False,
-                              kernel_regularizer=l2(weight_decay),
-                              return_sequences=True))(x)
+    x = Bidirectional(ConvLSTM2D(recurrent_filters, (3, 3), kernel_initializer="he_uniform", padding="same", use_bias=False,
+                          kernel_regularizer=l2(weight_decay),
+                          return_sequences=True))(x)
+    print("=============== DENSENET DEBUG =================")
+    deb.prints(K.int_shape(x))
     _, nb_filter, concat_list = __dense_block(x, bottleneck_nb_layers, nb_filter, growth_rate,
                                               dropout_rate=dropout_rate, weight_decay=weight_decay,
                                               return_concat_list=True,
                                               convrnn_layer=True)
-
+    #deb.prints(len(concat_list))
+    #deb.prints(K.int_shape(concat_list[0]))
+ 
     skip_list = skip_list[::-1]  # reverse the skip list
 
     if K.image_dim_ordering() == 'th':
@@ -442,7 +440,6 @@ def __create_fcn_dense_net(nb_classes, img_input, include_top, nb_dense_block=5,
             out_shape[1] = n_filters_keep
         else:
             out_shape[3] = n_filters_keep
-
         # upsampling block must upsample only the feature maps (concat_list[1:]),
         # not the concatenation of the input with the feature maps (concat_list[0].
         l = concatenate([m for m in concat_list[1:]], axis=concat_axis)

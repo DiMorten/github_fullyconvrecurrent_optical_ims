@@ -12,3 +12,14 @@ Timestamp:1598754393.42. Model: BUnet4ConvLSTM. Training time: 679.86
 Timestamp:1598772738.4. Model: BUnet4ConvLSTM. Training time: 677.59
 Timestamp:1598858627.48. Model: BUnet4ConvLSTM. Training time: 370.84
 Timestamp:1599007917.48. Model: BUnet4ConvLSTM. Training time: 1812.94
+Timestamp:1599074476.4. Model: BUnet4ConvLSTM. Training time: 425.57
+Timestamp:1599096269.76. Model: BUnet4ConvLSTM. Training time: 802.42
+Timestamp:1599142912.34. Model: BUnet4ConvLSTM. Training time: 439.07
+Timestamp:1599153179.72. Model: BUnet4ConvLSTM. Training time: 1317.34
+Timestamp:1599177083.98. Model: BUnet4ConvLSTM. Training time: 4741.6
+Timestamp:1599213120.01. Model: BUnet4ConvLSTM. Training time: 34977.49
+Timestamp:1599301294.12. Model: ConvLSTM_seq2seq. Training time: 17852.84
+Timestamp:1599359388.39. Model: ConvLSTM_seq2seq_bi. Training time: 24470.45
+Timestamp:1599390682.51. Model: ConvLSTM_seq2seq_bi. Training time: 25118.45
+Timestamp:1599507855.49. Model: BAtrousGAPConvLSTM. Training time: 49007.72
+Timestamp:1599570917.1. Model: ConvLSTM_seq2seq_bi. Training time: 23185.43
