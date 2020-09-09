@@ -15,6 +15,8 @@ import pandas as pd
 import cv2
 import pdb
 file_id="importantclasses"
+
+from PredictionsLoader import PredictionsLoaderNPY, PredictionsLoaderModel
 #====================================
 def labels_predictions_filter_transform(label_test,predictions,class_n,
 		debug=1,small_classes_ignore=True,
@@ -142,8 +144,16 @@ def experiment_analyze(small_classes_ignore,dataset='cv',
 	#path='/home/lvc/Jorg/igarss/convrnn_remote_sensing/results/seq2seq_ignorelabel/'+dataset+'/'
 	path="../../results/convlstm_results/"+dataset+'/'
 	prediction_path=path+prediction_filename
-	predictions=np.load(prediction_path, allow_pickle=True)
-	label_test=np.load(path+'labels.npy', allow_pickle=True)
+	path_test='../../../../dataset/dataset/'+dataset+'_data/patches_bckndfixed/test/'
+	
+	predictionsLoader = PredictionsLoaderNPY()
+	predictions, label_test = predictionsLoader.loadPredictions(prediction_path,path+'labels.npy')
+	
+	#predictionsLoader = PredictionsLoaderModel(path_test)
+	#predictions, label_test = predictionsLoader.loadPredictions(path[:-3] + 'model/'+dataset+'/'+prediction_filename)
+	
+	#predictions=np.load(prediction_path, allow_pickle=True)
+	#label_test=np.load(path+'labels.npy', allow_pickle=True)
 
 	
 	print("Loaded predictions unique: ",np.unique(predictions.argmax(axis=-1),return_counts=True))
@@ -525,7 +535,7 @@ elif dataset=='lm':
 		['prediction_ConvLSTM_seq2seq_redoingz2.npy',
 		'prediction_ConvLSTM_seq2seq_bi_redoingz2.npy',
 		'prediction_DenseNetTimeDistributed_128x2_redoingz2.npy'],]
-	exp_id=9 # choose 4 for thesis and journal paper
+	exp_id=8 # choose 4 for thesis and journal paper
 	if exp_id==2:
 		experiment_groups=[['prediction_ConvLSTM_seq2seq_bi_batch16_full.npy',
 			'prediction_DenseNetTimeDistributed_128x2_batch16_full.npy',
@@ -622,19 +632,13 @@ elif dataset=='lm':
 			]]			
 	elif exp_id==8: #Check against matlab f1 results
 		experiment_groups=[[
-			'prediction_convlstm.npy',
-			'prediction_ConvLSTM_seq2seq_repeating7.npy',
-			'prediction_ConvLSTM_seq2seq_batch16_full.npy',
-			'prediction_ConvLSTM_seq2seq_bi_batch16_full.npy' #double filters
+			'prediction_convlstm.npy'
 		]]
 	elif exp_id==9: #Check against matlab f1 results
 		experiment_groups=[[
-			'prediction_convlstm.npy',
-			'prediction_bconvlstm_lem_ok.npy',
-			'prediction_bconvlstm_lem_ok2.npy',
-			'prediction_BUnet4ConvLSTM_lmish_sar_newscript2.npy', #double filters
-			'prediction_batrousconvlstm_notok.npy'
+			'model_best_BConvLSTM_2.h5'
 		]]
+
 print("Experiment groups",experiment_groups)
 if load_metrics==False:
 	experiment_metrics=experiment_groups_analyze(dataset,experiment_groups,
