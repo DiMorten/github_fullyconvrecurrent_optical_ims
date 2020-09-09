@@ -422,8 +422,8 @@ def __create_fcn_dense_net(nb_classes, img_input, include_top, nb_dense_block=5,
                                               dropout_rate=dropout_rate, weight_decay=weight_decay,
                                               return_concat_list=True,
                                               convrnn_layer=True)
-    #deb.prints(len(concat_list))
-    #deb.prints(K.int_shape(concat_list[0]))
+    deb.prints(len(concat_list))
+    deb.prints(K.int_shape(concat_list[0]))
  
     skip_list = skip_list[::-1]  # reverse the skip list
 
